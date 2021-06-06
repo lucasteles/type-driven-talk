@@ -37,7 +37,7 @@ type ContaPaga = { CodigoDaConta:Guid; Data: DateTime }
 
 // aqui ja é uma evolução do Processo
 
-// vamo ter um evento sobre o sucesso da conta ou nao
+// vamos ter um evento sobre o sucesso da conta ou nao
 
 // primeira iteração, só happy path
 type PagarConta1 = Conta -> Pagamento -> ContaPaga
@@ -84,11 +84,11 @@ type PagarConta5 = Conta -> Pagamento -> Result<ContaPaga, PagarContaErros>
 
 
 // claro que os erros precisam virar string em algum momento, mas é trivial e seguro dessa forma
-type converteErro = PagarContaErros -> string
+type ConverteErro = PagarContaErros -> string
 
 //implementação
-let obterTextoDoErro erro =
-    match erro with
+let obterTextoDoErro: ConverteErro =
+    function
     | ContaVencida data -> $"A conta esta vencida desde {data}"
     | ValorPagoMenorQueOValorMinimo -> "O valor do pagamento nao é o minimo"
     | PagamentoAscimaDoValorDaConta -> "Pagamento excede o valor da conta"
