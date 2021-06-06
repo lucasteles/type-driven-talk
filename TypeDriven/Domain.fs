@@ -84,6 +84,9 @@ type PagarConta5 = Conta -> Pagamento -> Result<ContaPaga, PagarContaErros>
 
 
 // claro que os erros precisam virar string em algum momento, mas é trivial e seguro dessa forma
+type converteErro = PagarContaErros -> string
+
+//implementação
 let obterTextoDoErro erro =
     match erro with
     | ContaVencida data -> $"A conta esta vencida desde {data}"
