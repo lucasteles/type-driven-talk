@@ -1,6 +1,8 @@
 module TypeDriven.Domain
 
 open System
+open TypeDriven.Domain.Extra
+open TypeDriven.Domain.Extra
 
 type NumeroCheque = NumeroCheque of int
 type NumeroCartao = NumeroCartao of string
@@ -33,27 +35,27 @@ type Conta = {
    // outras informacoes como cliente. origem, etc
 }
 
-type ContaPaga = { CodigoDaConta:Guid; Data: DateTime }
+type ContaFoiPaga = { CodigoDaConta:Guid; Data: DateTime }
 
 // aqui ja é uma evolução do Processo
 
 // vamo ter um evento sobre o sucesso da conta ou nao
 
 // primeira iteração, só happy path
-type PagarConta1 = Conta -> Pagamento -> ContaPaga
+type PagarConta1 = Conta -> Pagamento -> ContaFoiPaga
 
 // mas e se eu tiver que validar a conta? como se ela estiver vencida, ou pagamento nao bater o valor minimo?
 // talvez um boolean?
-type PagarConta2 = Conta -> Pagamento -> (bool * ContaPaga)
+type PagarConta2 = Conta -> Pagamento -> (bool * ContaFoiPaga)
 // e sempre preciso validar o par de evento e booleano
 // mas nao é muito descritivo
 
-type PagarConta3 = Conta -> Pagamento -> ContaPaga option
+type PagarConta3 = Conta -> Pagamento -> ContaFoiPaga option
 // melhor ja que o option me fala se tem valor ou nao
 // mas ainda nao temos como dizer o pq de ter falhado
 
 // usamos uma forma mais inteligente
-type PagarConta4 = Conta -> Pagamento -> Result<ContaPaga, string>
+type PagarConta4 = Conta -> Pagamento -> Result<ContaFoiPaga, string>
 // esse me retorna uma string agora contendo o erro e consigo facilmente com um match saber se a conta deu certo
 //ex
 
@@ -80,7 +82,7 @@ type PagarContaErros =
     | PagamentoAscimaDoValorDaConta
 
 // assim temos uma assinatura que diz mais sobre o nosso modelo
-type PagarConta5 = Conta -> Pagamento -> Result<ContaPaga, PagarContaErros>
+type PagarConta5 = Conta -> Pagamento -> Result<ContaFoiPaga, PagarContaErros>
 
 
 // claro que os erros precisam virar string em algum momento, mas é trivial e seguro dessa forma
@@ -107,7 +109,7 @@ type ValidaPagameto = Pagamento -> bool
 
 // e adicionamos no nosso fluxo
 
-type PagarConta = ValidaPagameto -> Conta -> Pagamento -> Result<ContaPaga, PagarContaErros>
+type PagarConta = ValidaPagameto -> Conta -> Pagamento -> Result<ContaFoiPaga, PagarContaErros>
 // isso ja vai mudar a implementação
 // deixa claro a dependencia do meu fluxo
 
@@ -115,7 +117,7 @@ type PagarConta = ValidaPagameto -> Conta -> Pagamento -> Result<ContaPaga, Paga
 // tudo isso pode seguir o mesmo modelo
 type HttpResponse = { Body: obj; Status: int }
 
-type ContaPagaRepostaHttp = Result<ContaPaga, PagarContaErros> -> HttpResponse
+type ContaPagaRepostaHttp = Result<ContaFoiPaga, PagarContaErros> -> HttpResponse
 
 type PagamentoDTO = {
     Valor: decimal
@@ -149,6 +151,44 @@ let fluxoPagarConta: FluxoPagarConta =
     match resultado with
     | Ok taPago -> {Body = taPago; Status=200}
     | Error erro -> {Body = obterTextoDoErro erro; Status=400}
+
+
+module PreSolucao =
+
+    // que garantia tenho de que a conta passada é paga?
+    type GerarRecibo = Conta -> unit
+
+    // podemos colocar um booleano na conta
+    type Conta = {
+       Codigo: Guid
+       ValorTotal: Valor
+       // outros campos ...
+       Pago: bool
+    }
+    // mas isso significa que vou ser obrigado a validar esse campo,
+
+
+module Solucao =
+    // uma melhor opção seria deixar que o codigo nem compilace se a conta nao estiver paga
+    // pra isso podemos trocar flags por tipos
+    type ContaPendente = {
+       Codigo: Guid
+       ValorTotal: Valor
+       // outros campos ...
+    }
+
+    type ContaPaga = {
+       Codigo: Guid
+       ValorTotal: Valor
+       // outros campos ...
+       DataPagamento: DateTime
+    }
+    type Conta = ContaPendente | ContaPaga
+
+    type PagarConta = ValidaPagameto -> ContaPendente -> Pagamento -> Result<ContaPaga, PagarContaErros>
+    // vantagens... é impossivel pagar uma conta que já esta paga
+    // é possivel refatorar nosso GerarRecibo oara
+    type GerarRecibo = ContaPaga -> unit
 
 
 
